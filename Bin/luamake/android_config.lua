@@ -1,4 +1,4 @@
-
+﻿
 
 local ndkpath = os.getenv("ANDROID_NDK_ROOT") or os.getenv("NDK_ROOT") or os.getenv("NDKROOT")
 
@@ -26,7 +26,7 @@ if f then
 				setmetatable(ndk_version,
 				{
 				__tostring = function (tb)
-					return "r"..tb.main.. tostring(subv[tb.sub]);
+					return "r"..tb.main.. tostring(subv[tb.sub] or "");
 				end
 				})
 			else
@@ -38,6 +38,14 @@ if f then
 end
 
 print("ndk version", ndk_version or "unknown")
+
+local function getcorrectpath(path)
+	if path:find(" ") then
+		return '"'..path..'"'
+	else
+		return path
+	end
+end
 
 function android_config(proj, apilevel, arch, gccversion)
 	proj:AddFlag("-DANDROID")
@@ -71,66 +79,68 @@ function android_config(proj, apilevel, arch, gccversion)
 	local levelnumber = tonumber(splitstring(apilevel,"-")[2])
 	print("api level is ", levelnumber)
 	proj:AddFlag("-D__ANDROID_API__="..levelnumber)
-	if ndk_version and ndk_version.main>=16 and  levelnumber >=21 then --us llvm
+	if ndk_version and ndk_version.main>=16 and  levelnumber >=21 or ndk_version.main >=19  then --us llvm
 		print("use llvm")
-		proj:AddLib("stdc++");
-		proj:AddLib("c++");
-		proj:AddLib("z")
-		proj:AddCXXFlag("-std=c++11")
-		local llvm = ndkpath .. "/toolchains/llvm/prebuilt/windows-x86_64/bin"
+		--proj:AddLib("stdc++");
+		proj:AddCXXFlag("-std=c++14")
+		proj:AddCXXFlag("-stdlib=libc++")
+		--proj:AddCXXFlag("-fno-addrsig")
+		--proj:AddCXXFlag("-DANDROID_STL=c++_static")
+		--proj:AddLinkFlag("-fno-addrsig")
+		--
+		proj:AddLinkFlag("-static-libstdc++")
+		proj:AddLinkFlag("-stdlib=libc++")
+		--proj:AddLib("c++");
+		--proj:AddLib("z")
+		--proj:AddLib("gcc");
+		proj:AddLib("android");		
+		
+		--proj:AddCXXFlag("-stdlib=libstdc++")
+		local llvmroot = ndkpath .. "/toolchains/llvm/prebuilt/windows-x86_64/"
+		local llvm = llvmroot .. "bin"
+		local sysroot = llvmroot .. "sysroot"
+		--proj:AddLinkFlag("--sysroot=" .. getcorrectpath(sysroot))
+
+		--proj:AddLinkFlag("-gcc-toolchain " .. llvmroot)
+		--proj:AddLinkFlag("-static")
+		local clangtarget
 		if arch == "arm" then
 			abi  = "armeabi-v7a"
-			proj:AddFlag("-march=armv7-a")
 			proj:AddFlag("-D_ARM_")
-			proj:AddFlag("-no-canonical-prefixes")
-			proj:AddFlag("-gcc-toolchain " .. ndkpath .. "/toolchains/arm-linux-androideabi-4.9/prebuilt/windows-x86_64/")
+			proj:AddFlag("-march=armv7-a")
+			clangtarget = "armv7a-linux-androideabi" .. levelnumber				
+			--proj.compiler = llvm .. "/clang.exe -target armv7-none-linux-androideabi";
+			--proj.cxx_compiler = llvm .. "/clang++.exe -target armv7-none-linux-androideabi";
+			proj.ar = getcorrectpath(llvm .. "/arm-linux-androideabi-ar.exe");
+			--proj.linker =proj.compiler
+			--proj:AddLib("gcc")
+			--proj:AddLinkFlag("-Wl,-Bdynamic -lgcc_s")
+			--proj:AddLinkFlag("-m32")
+			--proj:AddLinkFlag("-rtlib=compiler-rt")
 
-			proj.compiler = llvm .. "/clang.exe -target armv7-none-linux-androideabi";
-			proj.cxx_compiler = llvm .. "/clang++.exe -target armv7-none-linux-androideabi";
-			proj.ar = adroidtoolpath .. "/arm-linux-androideabi-ar.exe";
-			proj.linker =proj.cxx_compiler
-			proj:AddIncludePath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/include/")
-			proj:AddIncludePath(ndkpath .. "/sysroot/usr/include")
-			proj:AddIncludePath(ndkpath .. "/sysroot/usr/include/"..platformtoolchains[arch])
-			proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/llvm-libc++/include")
-			--proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/llvm-libstdc++/"..gccversion.."/include/")
-			--proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/llvm-libstdc++/"..gccversion.."/libs/"..abi.."/include/")
-
-			proj:AddLibPath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/lib/")
-			proj:AddLibPath(ndkpath .. "/sources/cxx-stl/llvm-libc++/libs/"..abi.."/")
-			--proj:AddLibPath(ndkpath .. "/toolchains/arm-linux-androideabi-4.9/prebuilt/windows-x86_64/lib/gcc/arm-linux-androideabi/4.9.x")
-			--proj:AddLibPath(ndkpath .. "/toolchains/arm-linux-androideabi-4.9/prebuilt/windows-x86_64/arm-linux-androideabi/lib")
-			proj:AddLinkFlag("--sysroot=" .. ndkpath .. "/platforms/"..apilevel.."/arch-"..arch)
-
-			proj:AddLinkFlag("-gcc-toolchain " .. ndkpath .. "/toolchains/arm-linux-androideabi-4.9/prebuilt/windows-x86_64/")
-			proj:AddLinkFlag("-no-canonical-prefixes")
-
+		elseif arch=="arm64" then
+			abi = "arm64-v8a"
+			proj:AddFlag("-D_ARM_")
+			proj:AddFlag("-march=armv8-a")
+			proj:AddFlag("-D_AARCH64_")
+			proj:AddFlag("-D_X64")
+			clangtarget = "aarch64-none-linux-android" .. levelnumber	
+			proj.ar = getcorrectpath(llvm .. "/aarch64-linux-android-ar.exe");
 		elseif arch=="x86" then
-			abi  = "x86"
-
-			proj:AddFlag("-no-canonical-prefixes")
-			proj:AddFlag("-gcc-toolchain " .. ndkpath .. "/toolchains/x86-4.9/prebuilt/windows-x86_64")
-
-			proj.compiler = llvm .. "/clang.exe -target i686-none-linux-android";
-			proj.cxx_compiler = llvm .. "/clang++.exe -target i686-none-linux-android";
-			proj.ar = adroidtoolpath .. "/i686-linux-androideabi-ar.exe";
-			proj.linker =proj.cxx_compiler
-			proj:AddIncludePath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/include/")
-			proj:AddIncludePath(ndkpath .. "/sysroot/usr/include")
-			proj:AddIncludePath(ndkpath .. "/sysroot/usr/include/i686-linux-android")
-			proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/llvm-libc++/include")
-			--proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/llvm-libstdc++/"..gccversion.."/include/")
-			--proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/llvm-libstdc++/"..gccversion.."/libs/"..abi.."/include/")
-
-			proj:AddLibPath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/lib/")
-			proj:AddLibPath(ndkpath .. "/sources/cxx-stl/llvm-libc++/libs/"..abi.."/")
-			--proj:AddLibPath(ndkpath .. "/toolchains/arm-linux-androideabi-4.9/prebuilt/windows-x86_64/lib/gcc/arm-linux-androideabi/4.9.x")
-			--proj:AddLibPath(ndkpath .. "/toolchains/arm-linux-androideabi-4.9/prebuilt/windows-x86_64/arm-linux-androideabi/lib")
-			proj:AddLinkFlag("--sysroot=" .. ndkpath .. "/platforms/"..apilevel.."/arch-"..arch)
-
-			proj:AddLinkFlag("-gcc-toolchain " .. ndkpath .. "/toolchains/x86-4.9/prebuilt/windows-x86_64")
-			proj:AddLinkFlag("-no-canonical-prefixes")
+			abi = "x86"
+			--proj:AddFlag("-march=armv8-a")
+			clangtarget = "i686-linux-android" .. levelnumber	
+			proj.ar = getcorrectpath(llvm .. "/i686-linux-android-ar.exe");
+		else
+			error("unsupport arch:"..arch)
 		end
+
+		proj.compiler = getcorrectpath(llvm .. "/clang.exe").. " -target " .. clangtarget 
+		proj.cxx_compiler = getcorrectpath(llvm .. "/clang++.exe") .. " -target " .. clangtarget
+		--proj.ar = adroidtoolpath .. "/arm-linux-androideabi-ar.exe";
+		proj.linker = proj.cxx_compiler
+
+		--proj:AddFlag("-DANDROID_ABI="..abi)
 	else
 		proj:AddCXXFlag("-std=gnu++11")
 		proj:AddLib("gcc");

@@ -162,16 +162,16 @@ local getfileextname = getfileextname
 
 
 
-if build_platform == "linux" then
+if build_platform == "linux" or build_platform == "mac" then
 	getcurdir = function()
 		local errcode,msg = syscmd("pwd");
-		assert(errocde==0 or not errocde,"excutecmd error!");
+		assert(errcode==0 or not errcode,"excutecmd error!");
 		return string.sub(msg,1,-2);
 	end
 elseif build_platform == "windows" then
 	getcurdir = function()
 		local errcode,msg = syscmd("cd");
-		assert(errocde==0 or not errocde,"excutecmd error!" .. tostring(errocde) .. " " .. tostring(msg));
+		assert(errcode==0 or not errcode,"excutecmd error!" .. tostring(errcode) .. " " .. tostring(msg));
 		return string.sub(msg,1,-2);
 	end
 end
@@ -219,12 +219,14 @@ local target_op;-- = arg[2];
 if not target_name then
 	print("require build target:")
 	for k,v in pairs(proj.targets) do
-		print(v)
+		print(k)
 	end
+	print("options:[singlethread] [showbuildcmd] [forcedebug]")
 	error("miss target")
 end
 local force_sgine_thread
 local showbuildcmd
+local forcedebug
 for i=2,#arg do
 	if arg[i] == "clear" then
 		target_op = "clear"
@@ -233,13 +235,17 @@ for i=2,#arg do
 		force_sgine_thread = true
 	elseif arg[i] == "showbuildcmd" then
 		showbuildcmd = true
+	elseif arg[i] == "forcedebug" then
+		forcedebug = true
 	end
 end
 
 
 assert(proj.name, "project need a name!");
 print("proj name", proj.name)
-
+print("force_sgine_thread", force_sgine_thread)
+print("showbuildcmd", showbuildcmd)
+print("forcedebug", forcedebug)
 
 
 proj.targets = proj.targets or {};
@@ -484,25 +490,41 @@ print("build target", target_name)
 proj.target_name = target_name
 --if proj.compiler == "g++" then
 target(proj);
-
+if forcedebug then
+	proj:AddDefine("DEBUG")
+end
 
 function is_msvc()
 	return proj.compiler == "cl"
 end
+
+function is_emcc( ... )
+	return proj.compiler == "emcc"
+end
+
+
 local is_msvc = is_msvc
 
 if not is_msvc() then
-	proj:AddLib("stdc++");
 	proj:AddLib("m")
+	if proj.compiler == "gcc" then
+		proj:AddLib("stdc++");
+		
+	end
 
+	if build_platform == "mac" then
+		proj:AddDefine("MAC");
+	elseif build_platform == "linux" then 
+		proj:AddDefine("LINUX");
+	end
 
-	proj:AddDefine("LINUX");
-	if not proj:HasDefine("DEBUG") then
-		proj:AddDefine("NDEBUG");
-		proj:AddFlag("-O3");
-	else
+	if  proj:HasDefine("DEBUG") then
 		proj:AddFlag("-g")
 		proj:AddLinkFlag("-g")
+
+	else
+		proj:AddDefine("NDEBUG");
+		proj:AddFlag("-O3");
 	end
 else
 	proj:AddDefine("WIN32");
@@ -547,7 +569,14 @@ print("cc", proj.compiler)
 print("cxx", proj.cxx_compiler)
 print("linker", proj.linker)
 function deletepath( path )
-	local type = getpathtype(path)
+	path = standardpath(path)
+	local apath = path
+	if apath:sub(1,1)=='"' then
+		apath = apath:sub(2,-2);
+		
+	end
+	--print("delete path is", apath)
+	local type = getpathtype(apath)
 	if not type then return end
 
 	if build_platform == "windows" then
@@ -607,10 +636,13 @@ if target_op == "clear" then
 end
 
 if not is_msvc() then
+	proj:AddFlag("-fPIC");
 	if proj.target_type == "dll" or proj.target_type == "so" then
+		
 		proj:AddLinkFlag("-shared");
-		proj:AddFlag("-fPIC");
-		proj:AddLinkFlag("-Wl,--no-undefined");
+		if not is_emcc() then
+			proj:AddLinkFlag("-Wl,--no-undefined");
+		end
 	elseif proj.target_type == "lib" or proj.target_type == "a" then
 		proj:AddFlag("-static");
 	end
@@ -734,6 +766,7 @@ end
 
 pcall(function ( ... )
 	filestampinfo = dofile(projstampfilepath);
+	--print("file stamp loaded!", projstampfilepath)
 end)
 
 if not filestampinfo then
@@ -810,7 +843,7 @@ local function checkneedupdate(src)
 			local oldstamp = v-- curstampinfo[v];
 			local nowstamp = getfiledate(k);
 
-			--print("  check", v, oldstamp, nowstamp)
+			--print("  check",src, v, oldstamp, nowstamp)
 			if oldstamp~=nowstamp then
 				return true
 			end
@@ -991,8 +1024,8 @@ if true then
 					srcschanges = srcschanges + 1;
 					
 					print(string.format("%d%%done",math.floor((doneidx)/srcfilenum*100)));
-				--else
-					--print(src, "no changes!");
+				else
+					print(src, "no changes!");
 					--doneidx = doneidx + 1
 				end
 				doneidx = doneidx + 1
@@ -1036,8 +1069,7 @@ local function get_lib_stamp(libdir, lib)
 	end
 	return lp,libstamp
 end
-
-local function link( ... )
+local function getlinkcmd()
 	if proj.per_link then
 		proj.per_link(proj);
 	end
@@ -1086,15 +1118,15 @@ local function link( ... )
 		objfiles = objfiles .. " " .. getmidobjfilename(src) 
 	end
 	local midlibpath 
-	
-	
+
+
 	local rspfilepath = proj.mid_path .. "/allobj.rsp";
 	local f = io.open(rspfilepath,"w");
 	f:write(objfiles);
 	f:close();
 		
 	linkcmd = linkcmd .. " @"..rspfilepath;
-
+	linkcmd = linkcmd .. " " .. proj.linkflag 
 	if isdll then
 		for k,lib in ipairs(proj.libs) do
 
@@ -1129,7 +1161,7 @@ local function link( ... )
 			end
 		end
 	end
-	linkcmd = linkcmd .. " " .. proj.linkflag 
+
 	if not is_msvc() then
 		if isdll then
 			linkcmd = linkcmd.. " -Wl,-rpath,./"
@@ -1140,6 +1172,11 @@ local function link( ... )
 	if showbuildcmd then
 		print("link cmd is:", linkcmd);
 	end
+	return linkcmd
+end
+local function link( linkcmd )
+	
+	
 	local errcode,msg = syscmd(linkcmd);
 	if errcode ~= 0 then
 		if not showbuildcmd then
@@ -1147,14 +1184,18 @@ local function link( ... )
 		end
 		error(msg);
 	end
+	newestfilestampinfo["__linker"] = linkcmd
 	print(proj.outpath, "build success!")
 end
 
 
 
 local function check_lib_update()
+	if is_static_lib() then
+		return false 
+	end
 	print("check lib update...")
-	if is_static_lib() then return false end
+	
 	for k,lib in ipairs(proj.libs) do
 		
 		for _,libdir in ipairs(proj.library_paths) do
@@ -1162,7 +1203,7 @@ local function check_lib_update()
 			local lp,libstamp = get_lib_stamp(libdir,lib)
 			--print("check lib", lp, libstamp, newestfilestampinfo[lp] )
 			if libstamp ~= newestfilestampinfo[lp] then
-				--print("lib change",  lp, libstamp, newestfilestampinfo[lp])
+				print("lib change",  lp, libstamp, newestfilestampinfo[lp])
 				return true
 			end
 		end
@@ -1182,8 +1223,15 @@ local targetstamp = getfiledate(proj.outpath)
 --print("prject stamp:", proj.outpath, newestfilestampinfo[proj.outpath], targetstamp)
 --print("srcschanges", srcschanges , targetstamp~= newestfilestampinfo[proj.outpath] ,targetstamp)
 
-if srcschanges>0 or targetstamp~= newestfilestampinfo[proj.outpath] or not targetstamp or check_lib_update() then
-	link();
+local function check_link_flag_dirty(linkcmd)
+	return filestampinfo["__linker"]~=linkcmd
+end
+
+local needlink = srcschanges>0 or targetstamp~= newestfilestampinfo[proj.outpath] or not targetstamp or check_lib_update()
+local linkcmd = getlinkcmd()
+needlink = needlink or check_link_flag_dirty(linkcmd)
+if needlink  then
+	link(linkcmd);
 	targetstamp = getfiledate(proj.outpath,true)
 	--print("new stamp", targetstamp)
 	newestfilestampinfo[proj.outpath] = targetstamp;
@@ -1191,6 +1239,7 @@ if srcschanges>0 or targetstamp~= newestfilestampinfo[proj.outpath] or not targe
 else
 	print("no changes detected!");
 end
+
 if proj.post_build then
 	proj.post_build(proj);
 end
