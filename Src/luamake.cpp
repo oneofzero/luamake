@@ -9,6 +9,14 @@
 #define stricmp strcasecmp
 #include <sys/sysinfo.h>
 #endif
+#ifdef MAC
+#include <unistd.h>
+#include <strings.h>
+#define stricmp strcasecmp
+
+#include <mach-o/dyld.h>
+#endif
+
 extern "C"
 {
 #include "lua.h"
@@ -207,12 +215,17 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-#ifdef LINUX
+#if defined(LINUX)
 	
 	int n = readlink("/proc/self/exe", dir, 4096);
 	//printf("PATH_MAX: %d\n", 4096);
 	printf("readlink return: %d\n", n);
 	printf("dir: %s\n", dir);
+#elif defined(MAC)
+ 
+    uint32_t size = sizeof(dir);
+    int res = _NSGetExecutablePath(dir,&size);
+
 #else
 	
 	GetModuleFileName(NULL, dir, sizeof(dir));
@@ -252,6 +265,8 @@ int main(int argc, char** argv)
 	lua_pushstring(L, "windows");
 #elif defined(LINUX)
 	lua_pushstring(L, "linux");
+#elif defined(MAC)
+    lua_pushstring(L, "mac");
 #endif
 	lua_setglobal(L, "build_platform");
 
@@ -516,7 +531,7 @@ int lua_chdir(lua_State* L)
 		return 0;
 	}
 	auto dir = lua_tostring(L, 1);
-#ifdef LINUX
+#if defined(LINUX)||defined(MAC)
 	chdir(dir);
 #else
 	SetCurrentDirectory(dir);

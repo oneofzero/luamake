@@ -1,6 +1,15 @@
 #! /bin/bash
-g++ luamake.cpp -DLINUX -c -o luamake.o
-g++ threadmsg.cpp -std=gnu++11 -DLINUX -c -o threadmsg.o
+osname=`uname  -a`
+macos="Darwin"
+if [[ $osname =~ $macos ]];then
+echo "mac os"
+    osdefine="-DMAC"
+else
+    osdefine="-DLINUX"
+    linkflag="-lgcc -static-libgcc -static-libstdc++ -static"
+fi
+g++ luamake.cpp $osdefine -c -o luamake.o
+g++ threadmsg.cpp -std=gnu++11 $osdefine -c -o threadmsg.o
 luafiles=('lapi' 'lauxlib' 'lbaselib' 'lbitlib' 'lcode' 'lcorolib' 'lctype' 'ldblib' 'ldebug' 'ldo' 'ldump' 'lfunc' 'lgc' 'linit' 'liolib' 'llex' 'lmathlib' 'lmem' 'loadlib' 'lobject' 'lopcodes' 'loslib' 'lparser' 'lstate' 'lstring' 'lstrlib' 'ltable' 'ltablib' 'ltm' 'lundump' 'lutf8lib' 'lvm' 'lzio')
 
 alllua=''
@@ -13,4 +22,4 @@ done
 
 echo $alllua
 
-g++ threadmsg.o luamake.o $alllua -o luamake -ldl -lgcc -lc -lpthread -static-libgcc -static-libstdc++ -static
+g++ threadmsg.o luamake.o $alllua -o luamake -ldl -lc -lpthread $linkflag

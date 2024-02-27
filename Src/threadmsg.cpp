@@ -1,7 +1,6 @@
 #include "threadmsg.h"
 
 #ifdef LINUX
-
 #include <linux/limits.h> 
 #include <unistd.h>
 #include <strings.h>
@@ -12,6 +11,11 @@
 #include <windows.h>
 
 #endif
+#ifdef MAC
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #include <thread>
 #include <string>
 #include <queue>
@@ -246,6 +250,12 @@ int luaapi_getprocesscount(lua_State* L)
 	//return (int)systeminfo.dwNumberOfProcessors;
 	lua_pushinteger(L, systeminfo.dwNumberOfProcessors);
 	return 1;
+#elif defined(MAC)
+    int count;
+    size_t count_len = sizeof(count);
+    sysctlbyname("hw.logicalcpu", &count, &count_len, NULL, 0);
+    lua_pushinteger(L,count);
+    return 1;
 #else
 	lua_pushinteger(L, get_nprocs());
 
