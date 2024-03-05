@@ -4,7 +4,7 @@
 ### 使用方法
 window:
 
-降Bin/Luamake 添加到 环境变量Path。使其能在命令行中能直接被调用。
+将Bin/Luamake 添加到 环境变量Path。使其能在命令行中能直接被调用。
 
 linux:
 
