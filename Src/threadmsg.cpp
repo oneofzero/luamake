@@ -107,6 +107,10 @@ std::string lua_tostdstring(lua_State* L, int idx)
 
 }
 
+#ifdef MAC
+int luaapi_mac_execmd(lua_State* L);
+#endif
+
 int luaapi_newthread(lua_State* L)
 {
 	size_t l;
@@ -154,6 +158,11 @@ int luaapi_newthread(lua_State* L)
 
 		lua_State* newL = luaL_newstate();
 		luaL_openlibs(newL);
+
+#ifdef MAC
+		lua_pushcfunction(newL, luaapi_mac_execmd);
+		lua_setglobal(newL, "mac_execmd");
+#endif
 
 		lua_getglobal(newL, "debug");
 		lua_getfield(newL, -1, "traceback");

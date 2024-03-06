@@ -1,4 +1,5 @@
-print("lua maker begin!");
+print("lua maker begin!", luamakeroot);
+
 local string_sub = string.sub;
 local build_start_time = os.clock()
 local function _table2string(tb, st)
@@ -44,12 +45,18 @@ end
 
 local splitstring = splitstring
 
-function syscmd(cmd)
-	local f = io.popen(cmd);
-	local rt = f:read("*a");
-	local ok,stat,errcode = f:close();
-	return errcode,rt;
+local syscmd
+if build_platform == "mac" then
+	syscmd = mac_execmd
+else
+	syscmd = function (cmd)
+		local f = io.popen(cmd);
+		local rt = f:read("*a");
+		local ok,stat,errcode = f:close();
+		return errcode,rt;
+	end
 end
+
 
 local syscmd = syscmd
 
@@ -115,9 +122,10 @@ end
 if not getfiledate then
 	print("use lua getfiledate fun")
 	getfiledate = function (filepath)
-		local statret = io.popen("stat -c%Y ".. filepath);
-		local date = statret:read("*a");
-		local ok,desc,errcode = statret:close();
+		local errcode,date = syscmd("stat -c%Y ".. filepath)
+		--local statret = io.popen("stat -c%Y ".. filepath);
+		--local date = statret:read("*a");
+		--local ok,desc,errcode = statret:close();
 		if errcode~=0 then
 			--error(date);
 			return;
@@ -506,7 +514,11 @@ end
 local is_msvc = is_msvc
 
 if not is_msvc() then
-	proj:AddLib("m")
+	if build_platform~="mac" then
+		proj:AddLib("m")
+	else
+		
+	end
 	if proj.compiler == "gcc" then
 		proj:AddLib("stdc++");
 		
@@ -625,8 +637,9 @@ if target_op == "clear" then
 			errcode,msg = syscmd("rm -rf " .. proj.mid_path);
 			assert(errcode==0, msg);
 		end
-		if  getpathtype(proj.mid_path) == "file" then
-			errocde,msg = syscmd("rm -rf " .. proj.outpath);
+		if  getpathtype(proj.outpath) == "file" then
+			errocde,msg = syscmd("rm -f " .. proj.outpath);
+			print("delete ", proj.outpath)
 			assert(errcode==0,msg);
 		end
 	end
@@ -640,7 +653,7 @@ if not is_msvc() then
 	if proj.target_type == "dll" or proj.target_type == "so" then
 		
 		proj:AddLinkFlag("-shared");
-		if not is_emcc() then
+		if not is_emcc() and build_platform ~= "mac" then
 			proj:AddLinkFlag("-Wl,--no-undefined");
 		end
 	elseif proj.target_type == "lib" or proj.target_type == "a" then
@@ -701,16 +714,30 @@ local function getdepsfiles( srcfile )
 
 		
 		local cor = coroutine.running();
-		newthread([[
-		local gccrt = io.popen(arg);
-		local deps = gccrt:read("*a");
-		local isok,r,rcode = gccrt:close();
-		if rcode ~= 0 then
-			error(arg .. "\n" .. deps);
+
+		local cmd
+		if build_platform=="mac" then
+			cmd = [[
+				local rcode,deps = mac_execmd(arg)
+				if rcode ~= 0 then
+					error(arg .. "\n" .. deps);
+				end
+				return deps;
+			]]
+		else
+			cmd = [[
+				local gccrt = io.popen(arg);
+				local deps = gccrt:read("*a");
+				local isok,r,rcode = gccrt:close();
+				if rcode ~= 0 then
+					error(arg .. "\n" .. deps);
+				end
+				return deps;
+				
+				]]
 		end
-		return deps;
-		
-		]],"chunk", function(ok, ret)
+
+		newthread(cmd,"chunk", function(ok, ret)
 			
 			
 			local ok, rt = coroutine.resume(cor, ok, ret);
@@ -899,15 +926,26 @@ local function compileobj(src, buildcmd)
 		print(buildcmd);
 	end
 	
-	local runcmd = [[
-	local f = io.popen(arg);
-	local rt = f:read("*a");
-	local ok,stat,errcode = f:close();
-	if errcode~=0 then
-		error(rt);
+	local runcmd
+	if build_platform=="mac" then
+		runcmd=[[
+			local errcode, rt = mac_execmd(arg)
+			if errcode~=0 then
+				error(rt);
+			end
+			return rt;
+		]]
+	else
+		runcmd = [[
+		local f = io.popen(arg);
+		local rt = f:read("*a");
+		local ok,stat,errcode = f:close();
+		if errcode~=0 then
+			error(rt);
+		end
+		return rt;
+		]]
 	end
-	return rt;
-	]]
 	local cor = coroutine.running();
 	newthread(runcmd, "chunk_build", function(ok, ret)
 		if not ok then
@@ -1069,12 +1107,13 @@ local function get_lib_stamp(libdir, lib)
 	end
 	return lp,libstamp
 end
+print(string.format("targetoutputpath:'%s'", proj.outpath) );
 local function getlinkcmd()
 	if proj.per_link then
 		proj.per_link(proj);
 	end
 	print("link...");
-	print(getfilepath("asas"),proj.outpath);
+	--print(getfilepath("asas"),proj.outpath);
 
 	local ok = mkdirrecur(getfilepath(proj.outpath));
 	print("ok!");

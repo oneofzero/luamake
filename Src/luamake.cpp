@@ -12,6 +12,7 @@
 #ifdef MAC
 #include <unistd.h>
 #include <strings.h>
+#include <spawn.h>
 #define stricmp strcasecmp
 
 #include <mach-o/dyld.h>
@@ -103,6 +104,11 @@ int luaapi_getfiledate(lua_State* L)
 	lua_pushinteger(L, buf.st_atime);
 	return 3;
 }
+#ifdef MAC
+
+int luaapi_mac_execmd(lua_State* L);
+#endif
+
 //
 //int luaapi_getprocesscount(lua_State* L)
 //{
@@ -166,7 +172,7 @@ static int require_loader(lua_State* L)
 	FILE* fp = fopen(path, "rb");
 	if (fp == NULL)
 	{
-		printf("require filenot found!%s\n", path);
+		printf("require file not found!%s\n", path);
 		return 0;
 	}
 	fseek(fp, 0, SEEK_END);
@@ -178,8 +184,16 @@ static int require_loader(lua_State* L)
 	fclose(fp);
 	pdata[len] = 0;
 
-	luaL_dostring(L, pdata);
-	return 1;
+	int r = luaL_loadbuffer(L, pdata, len, pfilename);
+	free(pdata);
+	if (r == 0)
+		return 1;
+	else
+	{
+		const char* sErr = lua_tostring(L, -1);
+		lua_error(L);
+		return 0;
+	}
 }
 
 int lua_crc32(lua_State* L);
@@ -189,9 +203,12 @@ int lua_checksum(lua_State* L);
 int lua_open_threadmsg(lua_State* L);
 int lua_chdir(lua_State* L);
 
+static std::mutex* g_pLuaPOpenLock;
+
 int main(int argc, char** argv)
 {
 	printf("luamake version:10\n");
+	g_pLuaPOpenLock = new std::mutex();
 	lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 
@@ -235,6 +252,9 @@ int main(int argc, char** argv)
 	getfilepath(dir);
 	sprintf(path, "%s/main.lua", dir);
 
+	lua_pushstring(L, dir);
+	lua_setglobal(L, "luamakeroot");
+
 	lua_pushcfunction(L, luaapi_getfiledate);
 	lua_setglobal(L, "getfiledate");
 	lua_pushcfunction(L, luaapi_getpathtype);
@@ -243,6 +263,10 @@ int main(int argc, char** argv)
 	lua_setglobal(L, "getfilepath");
 	lua_pushcfunction(L, luaapi_standardpath);
 	lua_setglobal(L, "standardpath");
+#ifdef MAC
+	lua_pushcfunction(L, luaapi_mac_execmd);
+	lua_setglobal(L, "mac_execmd");
+#endif
 
 	lua_pushcfunction(L, lua_chdir);
 	lua_setglobal(L, "chdir");
@@ -297,6 +321,7 @@ int main(int argc, char** argv)
 	}
 	lua_setglobal(L, "arg");
 	r = lua_pcall(L, 0, 0, 1);
+	delete g_pLuaPOpenLock;
 	if (r != 0)
 	{
 #ifdef WIN32
@@ -540,3 +565,27 @@ int lua_chdir(lua_State* L)
 	lua_pushboolean(L, 1);
 	return 1;
 }
+
+
+
+
+#ifdef MAC
+int MacRunCmd(const char* cmd,std::string& sOutput);
+int luaapi_mac_execmd(lua_State* L)
+{
+
+
+
+	const char* sCMD = lua_tostring(L, 1);
+
+	std::string result;
+	auto status = MacRunCmd(sCMD, result);
+
+
+	lua_pushinteger(L, status);
+	lua_pushlstring(L, result.c_str(), result.length());
+	printf("exe %s:%d\n%s\n", sCMD, status, result.c_str());
+
+    return 2;
+}
+#endif
