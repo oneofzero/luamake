@@ -5,6 +5,8 @@ local ndkpath = os.getenv("ANDROID_NDK_ROOT") or os.getenv("NDK_ROOT") or os.get
 
 assert(ndkpath, "ANDROID_NDK_ROOT MUST SET!");
 print("ndkpath:", ndkpath);
+assert(getfiledate(ndkpath), "ANDROID_NDK_ROOT:'"..ndkpath.."' not exist!")
+
 local f = io.open(ndkpath.."/source.properties")
 
 local ndk_version
