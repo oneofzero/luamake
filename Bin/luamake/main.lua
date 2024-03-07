@@ -802,7 +802,18 @@ end
 
 
 local function getmidobjfilename(src)
-	local outfilename = proj.mid_path .. "/" ..getfilename(src)..".o";
+	local pathes = splitstring(src,"/")
+	for i,v in ipairs(pathes) do
+		if v=='..' then
+			pathes[i] = "u"
+		elseif v=='.' then
+			pathes[i] = ""					
+		end
+	end
+
+
+	--local outfilename = proj.mid_path .. "/" ..getfilename(src)..".o";
+	local outfilename = proj.mid_path .. "/" ..table.concat(pathes,"_")..".o";
 	return outfilename;
 end 
 
