@@ -704,6 +704,8 @@ local function getdepsfiles( srcfile )
 				compiler = proj.compiler .. " -std=c99";
 			elseif is_cxx_file(extname) then
 				compiler = proj.cxx_compiler .. proj.cxxflag;
+			else
+				compiler = proj.compiler
 				
 			end
 			cmds = compiler .. " -MM " .. srcfile .." " .. get_compile_options_cmd()--includespath .. defines .. flags;
@@ -838,7 +840,18 @@ local function get_compile_cmd( src )
 			
 		end
 
+		if proj.use_pch then
+			if proj.use_pch == src then
+				buildcmd = compiler .. string.format(" -o %s.gch -x c++-header %s %s", src, src, get_compile_options_cmd())
+				return buildcmd
+			--else
+			--	compiler = compiler .. string.format(" -include %s.gch", proj.use_pch)	
+			end
+				
+			
+		end
 		buildcmd = string.format(compiler.. " %s -o %s -c ", src, outfilename);
+		
 		
 		buildcmd = buildcmd .. get_compile_options_cmd()
 	else
@@ -915,7 +928,11 @@ local function save_stamp( ... )
 end
 
 if proj.use_pch then
-	assert(proj.create_pch)
+	if is_msvc() then
+		assert(proj.create_pch, "msvc must set proj.create_pch file")
+	else
+		print("build gcc pch")
+	end
 end
 
 local function compileobj(src, buildcmd)
@@ -1029,19 +1046,22 @@ if true then
 	local doneidx = 0;
 	local processnum = force_sgine_thread and 1 or getprocesscount();
 	local pch_src_idx 
-	if proj.use_pch then
-		for k,v in ipairs(proj.src_files) do
-			if v == proj.create_pch then
-				pch_src_idx = k
-				break
-			end
-		end
-		assert(pch_src_idx,"pch file not found!" .. tostring(proj.create_pch))
+	if proj.use_pch  then
 		print("compile pch")
+		if is_msvc() then
+			for k,v in ipairs(proj.src_files) do
+				if v == proj.create_pch then
+					pch_src_idx = k
+					break
+				end
+			end
+			assert(pch_src_idx,"pch file not found!" .. tostring(proj.create_pch))
+		end
+		local pchfile = is_msvc() and proj.create_pch or proj.use_pch
 		local pchcompile_done 
 		local cor = coroutine.create(function ( ... )
-			if checkneedupdate(proj.create_pch) then
-				compileobj(proj.create_pch);
+			if checkneedupdate(pchfile) then
+				compileobj(pchfile);
 				srcschanges = srcschanges + 1
 			end
 			pchcompile_done = true
@@ -1051,6 +1071,9 @@ if true then
 		while not pchcompile_done do
 			dispatchthreadmsg();
 		end
+		--else
+		--	compileobj(proj.use_pch);
+		--end
 		print("compile pch done")
 	end
 
