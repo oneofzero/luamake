@@ -46,8 +46,8 @@ end
 local splitstring = splitstring
 
 local syscmd
-if build_platform == "mac" then
-	syscmd = mac_execmd
+if build_platform == "mac" or build_platform == "windows" then
+	syscmd = sys_execmd
 else
 	syscmd = function (cmd)
 		local f = io.popen(cmd);
@@ -68,6 +68,7 @@ local function array_has(tb,_v)
 	end
 	
 end
+
 
 function getfilename(path)
 	assert(path,"path is nil!");
@@ -716,9 +717,9 @@ local function getdepsfiles( srcfile )
 		local cor = coroutine.running();
 
 		local cmd
-		if build_platform=="mac" then
+		if build_platform=="mac" or build_platform=="windows" then
 			cmd = [[
-				local rcode,deps = mac_execmd(arg)
+				local rcode,deps = sys_execmd(arg)
 				if rcode ~= 0 then
 					error(arg .. "\n" .. deps);
 				end
@@ -938,9 +939,9 @@ local function compileobj(src, buildcmd)
 	end
 	
 	local runcmd
-	if build_platform=="mac" then
+	if build_platform=="mac" or build_platform=="windows"  then
 		runcmd=[[
-			local errcode, rt = mac_execmd(arg)
+			local errcode, rt = sys_execmd(arg)
 			if errcode~=0 then
 				error(rt);
 			end

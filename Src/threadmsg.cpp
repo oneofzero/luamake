@@ -107,8 +107,8 @@ std::string lua_tostdstring(lua_State* L, int idx)
 
 }
 
-#ifdef MAC
-int luaapi_mac_execmd(lua_State* L);
+#if defined(MAC) || defined(WIN32)
+int luaapi_sys_execmd(lua_State* L);
 #endif
 
 int luaapi_newthread(lua_State* L)
@@ -159,9 +159,9 @@ int luaapi_newthread(lua_State* L)
 		lua_State* newL = luaL_newstate();
 		luaL_openlibs(newL);
 
-#ifdef MAC
-		lua_pushcfunction(newL, luaapi_mac_execmd);
-		lua_setglobal(newL, "mac_execmd");
+#if defined(MAC)||defined(WIN32)
+		lua_pushcfunction(newL, luaapi_sys_execmd);
+		lua_setglobal(newL, "sys_execmd");
 #endif
 
 		lua_getglobal(newL, "debug");

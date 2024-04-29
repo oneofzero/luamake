@@ -104,10 +104,11 @@ int luaapi_getfiledate(lua_State* L)
 	lua_pushinteger(L, buf.st_atime);
 	return 3;
 }
-#ifdef MAC
+#if defined(MAC) || defined(WIN32)
 
-int luaapi_mac_execmd(lua_State* L);
+int luaapi_sys_execmd(lua_State* L);
 #endif
+
 
 //
 //int luaapi_getprocesscount(lua_State* L)
@@ -263,9 +264,9 @@ int main(int argc, char** argv)
 	lua_setglobal(L, "getfilepath");
 	lua_pushcfunction(L, luaapi_standardpath);
 	lua_setglobal(L, "standardpath");
-#ifdef MAC
-	lua_pushcfunction(L, luaapi_mac_execmd);
-	lua_setglobal(L, "mac_execmd");
+#if defined(MAC) || defined(WIN32)
+	lua_pushcfunction(L, luaapi_sys_execmd);
+	lua_setglobal(L, "sys_execmd");
 #endif
 
 	lua_pushcfunction(L, lua_chdir);
@@ -569,9 +570,13 @@ int lua_chdir(lua_State* L)
 
 
 
+#if defined(MAC) || defined(WIN32)
 #ifdef MAC
 int MacRunCmd(const char* cmd,std::string& sOutput);
-int luaapi_mac_execmd(lua_State* L)
+#else
+int WinRunCmd(const char* cmd, std::string& sOutput);
+#endif
+int luaapi_sys_execmd(lua_State* L)
 {
 
 
@@ -579,13 +584,17 @@ int luaapi_mac_execmd(lua_State* L)
 	const char* sCMD = lua_tostring(L, 1);
 
 	std::string result;
+#ifdef MAC
 	auto status = MacRunCmd(sCMD, result);
-
+#else
+	auto status = WinRunCmd(sCMD, result);
+#endif
 
 	lua_pushinteger(L, status);
 	lua_pushlstring(L, result.c_str(), result.length());
-	printf("exe %s:%d\n%s\n", sCMD, status, result.c_str());
+	//printf("exe %s:%d\n%s\n", sCMD, status, result.c_str());
 
     return 2;
 }
 #endif
+

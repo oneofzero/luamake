@@ -114,5 +114,8 @@
     <ClCompile Include="lzio.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="lua.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
