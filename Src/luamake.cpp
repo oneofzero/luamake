@@ -109,6 +109,15 @@ int luaapi_getfiledate(lua_State* L)
 int luaapi_sys_execmd(lua_State* L);
 #endif
 
+int luaapi_gettime_ms(lua_State* L)
+{
+#ifdef LINUX
+	timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	lua_pushinteger(L, now.tv_sec * 1000ull + now.tv_nsec / 1000000);
+#endif
+	return 1;
+}
 
 //
 //int luaapi_getprocesscount(lua_State* L)
@@ -264,6 +273,10 @@ int main(int argc, char** argv)
 	lua_setglobal(L, "getfilepath");
 	lua_pushcfunction(L, luaapi_standardpath);
 	lua_setglobal(L, "standardpath");
+
+	lua_pushcfunction(L, luaapi_gettime_ms);
+	lua_setglobal(L, "gettimems");
+
 #if defined(MAC) || defined(WIN32)
 	lua_pushcfunction(L, luaapi_sys_execmd);
 	lua_setglobal(L, "sys_execmd");

@@ -1,7 +1,7 @@
 print("lua maker begin!", luamakeroot);
 
 local string_sub = string.sub;
-local build_start_time = os.clock()
+local build_start_time = gettimems()
 local function _table2string(tb, st)
 	-- body
 
@@ -1318,4 +1318,4 @@ if proj.post_build then
 	proj.post_build(proj);
 end
 
-print("used ",os.clock() - build_start_time)
+print("used ", string.format("%.2fs",(gettimems() - build_start_time)/1000) )

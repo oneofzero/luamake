@@ -48,7 +48,7 @@ local function getcorrectpath(path)
 		return path
 	end
 end
-
+local exe_ext_name = build_platform == "windows" and ".exe" or ""
 function android_config(proj, apilevel, arch, gccversion)
 	proj:AddFlag("-DANDROID")
 	
@@ -76,7 +76,7 @@ function android_config(proj, apilevel, arch, gccversion)
 	local abi;
 	
 
-	local adroidtoolpath = ndkpath .. "/toolchains/".. platformtoolchains[arch] .."-" .. gccversion .. "/prebuilt/windows-x86_64/bin"
+	local adroidtoolpath = ndkpath .. "/toolchains/".. platformtoolchains[arch] .."-" .. gccversion .. "/prebuilt/"..build_platform.."-x86_64/bin"
 	apilevel = apilevel or "android-16"
 	local levelnumber = tonumber(splitstring(apilevel,"-")[2])
 	print("api level is ", levelnumber)
@@ -98,7 +98,7 @@ function android_config(proj, apilevel, arch, gccversion)
 		proj:AddLib("android");		
 		
 		--proj:AddCXXFlag("-stdlib=libstdc++")
-		local llvmroot = ndkpath .. "/toolchains/llvm/prebuilt/windows-x86_64/"
+		local llvmroot = ndkpath .. "/toolchains/llvm/prebuilt/"..build_platform.."-x86_64/"
 		local llvm = llvmroot .. "bin"
 		local sysroot = llvmroot .. "sysroot"
 		--proj:AddLinkFlag("--sysroot=" .. getcorrectpath(sysroot))
@@ -111,9 +111,8 @@ function android_config(proj, apilevel, arch, gccversion)
 			proj:AddFlag("-D_ARM_")
 			proj:AddFlag("-march=armv7-a")
 			clangtarget = "armv7a-linux-androideabi" .. levelnumber				
-			--proj.compiler = llvm .. "/clang.exe -target armv7-none-linux-androideabi";
-			--proj.cxx_compiler = llvm .. "/clang++.exe -target armv7-none-linux-androideabi";
-			proj.ar = getcorrectpath(llvm .. "/arm-linux-androideabi-ar.exe");
+
+			proj.ar = getcorrectpath(llvm .. "/arm-linux-androideabi-ar" .. exe_ext_name);
 			--proj.linker =proj.compiler
 			--proj:AddLib("gcc")
 			--proj:AddLinkFlag("-Wl,-Bdynamic -lgcc_s")
@@ -127,18 +126,18 @@ function android_config(proj, apilevel, arch, gccversion)
 			proj:AddFlag("-D_AARCH64_")
 			proj:AddFlag("-D_X64")
 			clangtarget = "aarch64-none-linux-android" .. levelnumber	
-			proj.ar = getcorrectpath(llvm .. "/aarch64-linux-android-ar.exe");
+			proj.ar = getcorrectpath(llvm .. "/aarch64-linux-android-ar".. exe_ext_name);
 		elseif arch=="x86" then
 			abi = "x86"
 			--proj:AddFlag("-march=armv8-a")
 			clangtarget = "i686-linux-android" .. levelnumber	
-			proj.ar = getcorrectpath(llvm .. "/i686-linux-android-ar.exe");
+			proj.ar = getcorrectpath(llvm .. "/i686-linux-android-ar"..exe_ext_name);
 		else
 			error("unsupport arch:"..arch)
 		end
 
-		proj.compiler = getcorrectpath(llvm .. "/clang.exe").. " -target " .. clangtarget 
-		proj.cxx_compiler = getcorrectpath(llvm .. "/clang++.exe") .. " -target " .. clangtarget
+		proj.compiler = getcorrectpath(llvm .. "/clang"..exe_ext_name).. " -target " .. clangtarget 
+		proj.cxx_compiler = getcorrectpath(llvm .. "/clang++"..exe_ext_name) .. " -target " .. clangtarget
 		--proj.ar = adroidtoolpath .. "/arm-linux-androideabi-ar.exe";
 		proj.linker = proj.cxx_compiler
 
@@ -151,9 +150,9 @@ function android_config(proj, apilevel, arch, gccversion)
 			abi  = "armeabi-v7a"
 			proj:AddFlag("-march=armv7-a")
 			proj:AddFlag("-D_ARM_")
-			proj.compiler = adroidtoolpath .. "/arm-linux-androideabi-gcc.exe";
-			proj.cxx_compiler = adroidtoolpath .. "/arm-linux-androideabi-g++.exe";
-			proj.ar = adroidtoolpath .. "/arm-linux-androideabi-ar.exe";
+			proj.compiler = adroidtoolpath .. "/arm-linux-androideabi-gcc"..exe_ext_name;
+			proj.cxx_compiler = adroidtoolpath .. "/arm-linux-androideabi-g++"..exe_ext_name;
+			proj.ar = adroidtoolpath .. "/arm-linux-androideabi-ar"..exe_ext_name;
 			proj.linker =proj.cxx_compiler
 			proj:AddIncludePath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/include/")
 			proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/gnu-libstdc++/"..gccversion.."/include/")
@@ -169,9 +168,9 @@ function android_config(proj, apilevel, arch, gccversion)
 			proj:AddFlag("-D_ARM_")
 			proj:AddFlag("-D_AARCH64_")
 			proj:AddFlag("-D_X64")
-			proj.compiler = adroidtoolpath .. "/aarch64-linux-android-gcc.exe";
-			proj.cxx_compiler = adroidtoolpath .. "/aarch64-linux-android-g++.exe";
-			proj.ar = adroidtoolpath .. "/aarch64-linux-android-ar.exe";
+			proj.compiler = adroidtoolpath .. "/aarch64-linux-android-gcc"..exe_ext_name;
+			proj.cxx_compiler = adroidtoolpath .. "/aarch64-linux-android-g++"..exe_ext_name;
+			proj.ar = adroidtoolpath .. "/aarch64-linux-android-ar"..exe_ext_name;
 			proj.linker =proj.cxx_compiler
 			proj:AddIncludePath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/include/")
 			proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/gnu-libstdc++/"..gccversion.."/include/")
@@ -183,9 +182,9 @@ function android_config(proj, apilevel, arch, gccversion)
 
 		elseif arch == "x86" then
 			abi  = "x86"
-			proj.compiler = adroidtoolpath .. "/i686-linux-android-gcc.exe";
-			proj.cxx_compiler = adroidtoolpath .. "/i686-linux-android-g++.exe";
-			proj.ar = adroidtoolpath .. "/i686-linux-android-ar.exe"
+			proj.compiler = adroidtoolpath .. "/i686-linux-android-gcc"..exe_ext_name;
+			proj.cxx_compiler = adroidtoolpath .. "/i686-linux-android-g++"..exe_ext_name;
+			proj.ar = adroidtoolpath .. "/i686-linux-android-ar"..exe_ext_name
 			proj.linker =proj.cxx_compiler
 			proj:AddIncludePath(ndkpath .. "/platforms/"..apilevel.."/arch-"..arch.."/usr/include/")
 			proj:AddIncludePath(ndkpath .. "/sources/cxx-stl/gnu-libstdc++/"..gccversion.."/include/")
@@ -201,9 +200,10 @@ function android_config(proj, apilevel, arch, gccversion)
 	proj.abi = abi;
 	proj.apilevel = apilevel;
 	proj.arch = arch;
-	proj:AddLibPath("../../../android/"..proj.target_name.."/");
-	proj.mid_path = ("../../../android/bt/"..proj.target_name.."/" .. proj.name.."/");
+	proj.output_dir = proj.output_dir or "../../../android"
+	proj:AddLibPath(proj.output_dir ..  "/"..proj.target_name.."/");
+	proj.mid_path = (proj.output_dir .. "/bt/"..proj.target_name.."/" .. proj.name.."/");
 	proj.arflag = "-r";
-	proj:SetOutputPath("../../../android/"..proj.target_name.."/lib".. proj.name .. "." .. proj.target_type);
+	proj:SetOutputPath(proj.output_dir ..  "/"..proj.target_name.."/lib".. proj.name .. "." .. proj.target_type);
 
 end
