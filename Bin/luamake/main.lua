@@ -45,7 +45,7 @@ end
 
 local splitstring = splitstring
 
-local syscmd
+
 if build_platform == "mac" or build_platform == "windows" then
 	syscmd = sys_execmd
 else
