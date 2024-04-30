@@ -67,7 +67,7 @@ flags={
 [[-Wno-newline-eof]],
 [[-Wno-c++11-extensions]],
 [[-Wno-implicit-fallthrough]],
-[[-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk]],
+[[-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk]],
 [[-fstrict-aliasing]],
 [[-Wdeprecated-declarations]],
 [[-Winvalid-offsetof]],

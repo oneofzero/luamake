@@ -54,7 +54,7 @@ flags={
 [[-Wno-newline-eof]],
 [[-Wno-c++11-extensions]],
 [[-Wno-implicit-fallthrough]],
-[[-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.2.sdk]],
+[[-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk]],
 [[-fstrict-aliasing]],
 [[-Wdeprecated-declarations]],
 [[-Winvalid-offsetof]],
