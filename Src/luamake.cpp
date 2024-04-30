@@ -115,6 +115,17 @@ int luaapi_gettime_ms(lua_State* L)
 	timespec now;
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	lua_pushinteger(L, now.tv_sec * 1000ull + now.tv_nsec / 1000000);
+#elif defined(MAC)
+	timeval tv;
+	gettimeofday(&tv, NULL);
+	lua_pushinteger(L, tv.tv_sec * 1000ull + tv.tv_nsec / 1000);
+#else
+	long long curCounter;
+	long long freq;
+	QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+	QueryPerformanceCounter((LARGE_INTEGER*)&curCounter);
+	freq /= 1000;
+	lua_pushinteger(L, curCounter / freq);
 #endif
 	return 1;
 }
