@@ -1,4 +1,4 @@
-﻿
+
 
 local ndkpath = os.getenv("ANDROID_NDK_ROOT") or os.getenv("NDK_ROOT") or os.getenv("NDKROOT")
 
