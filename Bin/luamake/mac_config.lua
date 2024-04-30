@@ -20,7 +20,7 @@ function mac_config(proj,arch)
 
     proj:AddLinkFlag([[-std\=gnu++2]])
     proj:AddLinkFlag("-Xlinker -reproducible")
-    proj:AddLinkFlag(" -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk -Os")
+    proj:AddLinkFlag(" -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -Os")
     
 end
 

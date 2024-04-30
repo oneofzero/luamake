@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <strings.h>
 #include <spawn.h>
+#include <sys/time.h>
 #define stricmp strcasecmp
 
 #include <mach-o/dyld.h>
@@ -118,7 +119,7 @@ int luaapi_gettime_ms(lua_State* L)
 #elif defined(MAC)
 	timeval tv;
 	gettimeofday(&tv, NULL);
-	lua_pushinteger(L, tv.tv_sec * 1000ull + tv.tv_nsec / 1000);
+	lua_pushinteger(L, tv.tv_sec * 1000ull + tv.tv_usec / 1000);
 #else
 	long long curCounter;
 	long long freq;
