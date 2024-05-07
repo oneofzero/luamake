@@ -18,7 +18,7 @@ return function (proj)
 	proj:AddCXXFlag("-fno-exceptions")
 	
 	--proj:AddFlag("-pthread");
-	proj:AddCXXFlag("-std=c++11");
+	proj:AddCXXFlag("-std=c++17");
 	proj.base(proj);
 	proj:SetTargetType("a");
 	proj:RemoveDefine("LINUX")
