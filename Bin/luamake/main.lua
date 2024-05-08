@@ -693,7 +693,7 @@ end
 
 
 local function getdepsfiles( srcfile )
-
+--	print("get file stamp:", srcfile)
 	local includespath = "";
 		local cmds
 		if not is_msvc() then
@@ -739,7 +739,7 @@ local function getdepsfiles( srcfile )
 				
 				]]
 		end
-
+		--print("get file dep cmd:",cmds)
 		newthread(cmd,"chunk", function(ok, ret)
 			
 			
@@ -761,22 +761,31 @@ local function getdepsfiles( srcfile )
 			error("get deps file error! : not found!");
 		end	
 		deps = string_sub(deps, pos+1);
-		--print("original is ", deps);
-		local deps_processed = "";
+		
+		--print("processed is ", deps);
+		local deps_processed = {}
 		local i = 1;
-		local l = string.len(deps);
+		local l = #deps
+		local s = 1
 		while i < l do
-			local  c = string_sub(deps,i, i );
-			if c == "\\" then
-				i = i + 1;
-			else
-				deps_processed = deps_processed .. c;
+			local c = string_sub(deps, i, i + 5 );
+			--print("C:", c)
+			if c==" \\\r\n  " then
+				deps_processed[#deps_processed+1] = string_sub(deps,s,i-1)
+				i = i + 6
+				s = i
+			--else
+				--deps_processed = deps_processed .. c;
 			end
 			i = i + 1;
 
 		end
-		--print("processed is ", deps_processed);
-		return splitstring(deps_processed, " ");
+		--print("dep:")
+		--for k,v in ipairs(deps_processed) do
+		--	print(string.format("[%s]",v))
+		--end
+		return deps_processed
+		--return splitstring(deps_processed, "\\\r\n");
 	
 	--print("include path", includespath);
 
@@ -1021,10 +1030,10 @@ local function compileobj(src, buildcmd)
 				--print("check", l)
 			end
 		end
-		newstamps[src] = getfiledate(src,true)
+		
 		--newstamps["compilecmd"] = buildcmd
 	end
-
+	newstamps[src] = getfiledate(src,true)
 	newstamps.__cmd = buildcmd
 	--local errcode, msg = syscmd(buildcmd)
 	--if errcode~=0 then
@@ -1087,7 +1096,7 @@ if true then
 				local ispchsrc = pch_src_idx and curidx == pch_src_idx 
 				--local idx = curidx;
 				curidx = curidx + 1;
-				--print("check " .. src)		
+				--print("check " , src, ispchsrc)		
 					--local depsfiles = checkneedupdate(src) 
 				--if pch_src_idx and curidx == pch_src_idx then
 				
