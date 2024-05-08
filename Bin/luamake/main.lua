@@ -769,13 +769,16 @@ local function getdepsfiles( srcfile )
 		local s = 1
 		while i < l do
 			local c = string_sub(deps, i, i + 5 );
+			local c2 = string_sub(deps, i, i + 4 );
 			--print("C:", c)
 			if c==" \\\r\n  " then
 				deps_processed[#deps_processed+1] = string_sub(deps,s,i-1)
 				i = i + 6
 				s = i
-			--else
-				--deps_processed = deps_processed .. c;
+			elseif c2==" \\\n  " then
+				deps_processed[#deps_processed+1] = string_sub(deps,s,i-1)
+				i = i + 5
+				s = i
 			end
 			i = i + 1;
 
