@@ -223,7 +223,8 @@ print("root path:", root_path);
 local proj = require("make");
 
 
-local target_name = arg[1];
+target_name = arg[1];
+local target_name = target_name
 local target_op;-- = arg[2];
 if not target_name then
 	print("require build target:")
@@ -457,12 +458,8 @@ print("build target:", target_name)
 
 proj.mid_path = proj.mid_path .."/"..target_name
 
-
-if type(proj.src_files) == "function" then
-	proj.src_files = proj:src_files();
-elseif type(proj.src_files) == "string" then
-	--print("src_files", proj.src_files);
-	local dirs = splitstring(proj.src_files,";");
+function ListFile(pa)
+	local dirs = splitstring(pa,";");
 	--print("dirs", table2string(dirs));
 	
 	local tb = {};
@@ -487,11 +484,17 @@ elseif type(proj.src_files) == "string" then
 		
 		assert(code==0 ,lscmd ..v.." err!" .. tostring(code));
 	end
-	proj.src_files = tb;
+	return tb
+end
+
+if type(proj.src_files) == "function" then
+	proj.src_files = proj:src_files();
+elseif type(proj.src_files) == "string" then
+
+	proj.src_files = ListFile(proj.src_files);
 elseif not proj.src_files then
 	error("no src files!");
 end
---print("src files:", table2string(proj.src_files));
 
 local target = proj.targets[target_name];
 assert(target, "cant find target ".. target_name);
