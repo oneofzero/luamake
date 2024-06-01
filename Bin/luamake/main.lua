@@ -273,7 +273,8 @@ proj.mid_path = proj.mid_path or "buildtemp";
 
 local proj_meta = {};
 function proj_meta:RemoveSrc(srcs)
-	srcs = splitstring(srcs,";");
+	--srcs = splitstring(srcs,";");
+	srcs = ListFile(srcs)
 	for k,src in ipairs(srcs) do
 		for k,v in ipairs(proj.src_files) do
 			if string.find(v,src) then
@@ -285,14 +286,17 @@ function proj_meta:RemoveSrc(srcs)
 end
 
 function proj_meta:AddSrc(srcs)
-	srcs = splitstring(srcs,";");
+	--srcs = splitstring(srcs,";");
+	srcs = ListFile(srcs)
+	print("src", #srcs)
 	for k,src in ipairs(srcs) do
 		for k,v in ipairs(proj.src_files) do
-			if not string.find(v,src) then
-				table.insert(proj.src_files,src);
-				break
+			if string.find(v,src) then				
+				return
 			end
 		end
+		table.insert(proj.src_files,src);
+		print("addsrc", src)
 	end
 end
 
@@ -474,15 +478,19 @@ function ListFile(pa)
 		if iswindows then
 			v = string.gsub(v, "/", "\\");
 		end
-
-
-		local f = io.popen(lscmd..v, "r");
-		for l in f:lines() do 
-			tb[#tb+1] = l;
-		end
-		local ok,st,code = f:close();
 		
-		assert(code==0 ,lscmd ..v.." err!" .. tostring(code));
+		if not v:find("*") then
+			tb[#tb+1] = v;
+		else
+
+			local f = io.popen(lscmd..v, "r");
+			for l in f:lines() do 
+				tb[#tb+1] = l;
+			end
+			local ok,st,code = f:close();
+			
+			assert(code==0 ,lscmd ..v.." err!" .. tostring(code));
+		end
 	end
 	return tb
 end
@@ -493,15 +501,28 @@ elseif type(proj.src_files) == "string" then
 
 	proj.src_files = ListFile(proj.src_files);
 elseif not proj.src_files then
-	error("no src files!");
+	--error("no src files!");
+	proj.src_files = {}
 end
 
 local target = proj.targets[target_name];
 assert(target, "cant find target ".. target_name);
-print("build target", target_name)
+--print("build target", target_name)
 proj.target_name = target_name
+
 --if proj.compiler == "g++" then
 target(proj);
+
+if type(proj.src_files)=="string" then	
+	print("src:",proj.src_files);
+	proj.src_files = ListFile(proj.src_files);
+end
+
+
+if not proj.src_files or  #proj.src_files==0 then
+	error("no src files!")
+end
+
 if forcedebug then
 	proj:AddDefine("DEBUG")
 end
@@ -1111,7 +1132,7 @@ if true then
 					compileobj(src);
 					srcschanges = srcschanges + 1;
 					
-					print(string.format("%d%%done",math.floor((doneidx)/srcfilenum*100)));
+					print(string.format("%d%%done",math.floor((doneidx+1)/srcfilenum*100)));
 				else
 					print(src, "no changes!");
 					--doneidx = doneidx + 1
