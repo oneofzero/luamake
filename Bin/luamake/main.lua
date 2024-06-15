@@ -787,6 +787,8 @@ local function getdepsfiles( srcfile )
 		deps = string_sub(deps, pos+1);
 		
 		--print("processed is ", deps);
+		local deps_processed = parseMMstr(deps)
+		--[[
 		local deps_processed = {}
 		local i = 1;
 		local l = #deps
@@ -794,19 +796,22 @@ local function getdepsfiles( srcfile )
 		while i < l do
 			local c = string_sub(deps, i, i + 5 );
 			local c2 = string_sub(deps, i, i + 4 );
-			--print("C:", c)
+			print("C:", c)
 			if c==" \\\r\n  " then
 				deps_processed[#deps_processed+1] = string_sub(deps,s,i-1)
+				--print("---", s, i-1, deps_processed[#deps_processed])
 				i = i + 6
 				s = i
 			elseif c2==" \\\n  " then
 				deps_processed[#deps_processed+1] = string_sub(deps,s,i-1)
+				--print("+++", deps_processed[#deps_processed])
 				i = i + 5
 				s = i
 			end
 			i = i + 1;
 
 		end
+		]]
 		--print("dep:")
 		--for k,v in ipairs(deps_processed) do
 		--	print(string.format("[%s]",v))

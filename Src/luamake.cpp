@@ -218,6 +218,56 @@ static int require_loader(lua_State* L)
 	}
 }
 
+int luaapi_parse_mm_str(lua_State* L)
+{
+	size_t len;
+	const char* s = lua_tolstring(L, 1, &len);
+	if (s == NULL)
+		return 0;
+	//lua_createtable(L, 4, 0);
+	std::string fname;
+	std::vector<std::string> fnames;
+	while (*s)
+	{
+		if (*s == '\\')
+		{
+			++s;
+
+			if (*s == '\r' || *s == '\n')
+			{
+				++s;
+				if (*s == '\r') ++s;
+				if (*s == '\n') ++s;
+			}
+			else
+			{
+				fname.push_back(*s);
+			}
+		}
+		else if (*s == ' ')
+		{
+			if (fname.size())
+			{
+				fnames.push_back(fname);
+				fname.clear();
+			}
+		}
+		else
+		{
+			fname.push_back(*s);
+		}
+		++s;
+	}
+	lua_createtable(L, fnames.size(), 0);
+	for (int i = 0; i < fnames.size(); i++)
+	{
+		lua_pushlstring(L, fnames[i].c_str(), fnames[i].length());
+		lua_rawseti(L, -2, i + 1);
+	}
+
+	return 1;
+}
+
 int lua_crc32(lua_State* L);
 
 int lua_stringbuilder(lua_State* L);
@@ -285,6 +335,9 @@ int main(int argc, char** argv)
 	lua_setglobal(L, "getfilepath");
 	lua_pushcfunction(L, luaapi_standardpath);
 	lua_setglobal(L, "standardpath");
+
+	lua_pushcfunction(L, luaapi_parse_mm_str);
+	lua_setglobal(L, "parseMMstr");
 
 	lua_pushcfunction(L, luaapi_gettime_ms);
 	lua_setglobal(L, "gettimems");
@@ -466,6 +519,7 @@ int lua_stringbuilder_append(lua_State* L);
 int lua_stringbuilder_clear(lua_State* L);
 int lua_stringbuilder_tostring(lua_State* L);
 int lua_stringbuilder_gc(lua_State* L);
+
 
 int lua_stringbuilder(lua_State* L)
 {
