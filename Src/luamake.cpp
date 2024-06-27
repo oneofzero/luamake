@@ -241,10 +241,12 @@ int luaapi_parse_mm_str(lua_State* L)
 			}
 			else
 			{
+				if (*s != ' ')
+					fname.push_back(*(s - 1));
 				fname.push_back(*s);
 			}
 		}
-		else if (*s == ' ')
+		else if (*s == ' ' || *s=='\r' || *s=='\n')
 		{
 			if (fname.size())
 			{
@@ -258,6 +260,10 @@ int luaapi_parse_mm_str(lua_State* L)
 		}
 		++s;
 	}
+
+	if (fname.size())
+		fnames.push_back(fname);
+
 	lua_createtable(L, fnames.size(), 0);
 	for (int i = 0; i < fnames.size(); i++)
 	{
