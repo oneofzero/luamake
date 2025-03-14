@@ -726,7 +726,7 @@ local function getdepsfiles( srcfile )
 			local compiler;
 			local extname = getfileextname(srcfile) ;
 			if extname == "c" then
-				compiler = proj.compiler .. " -std=c99";
+				compiler = proj.compiler;
 			elseif is_cxx_file(extname) then
 				compiler = proj.cxx_compiler .. proj.cxxflag;
 			else
@@ -876,7 +876,7 @@ local function get_compile_cmd( src )
 
 
 		if extname == "c" then
-			compiler = proj.compiler .. " -std=c99";
+			compiler = proj.compiler;
 		elseif is_cxx_file(extname) then
 			compiler = proj.cxx_compiler .. proj.cxxflag;
 			
